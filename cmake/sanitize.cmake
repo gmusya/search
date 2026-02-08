@@ -1,0 +1,11 @@
+if(UBSAN)
+    message(STATUS "Sanitize with UB Sanitizer (UBSAN)")
+    add_compile_options(-fsanitize=undefined -fno-sanitize-recover=all)
+    add_link_options(-fsanitize=undefined)
+endif()
+
+if(ASAN)
+    message(STATUS "Sanitize with Address Sanitizer (ASAN)")
+    add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all)
+    add_link_options(-fsanitize=address,undefined)
+endif()
