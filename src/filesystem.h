@@ -12,6 +12,8 @@ class IFileSystem {
   virtual std::string Create() = 0;
   virtual std::shared_ptr<IFile> Open(const std::string& path) = 0;
   virtual void Remove(const std::string& path) = 0;
+
+  virtual ~IFileSystem() = default;
 };
 
 }  // namespace search
