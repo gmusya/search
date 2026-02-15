@@ -1,6 +1,6 @@
 #pragma once
 
-#include <algorithm>
+#include <bit>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
