@@ -103,6 +103,7 @@ class Lsm {
 
  private:
   void FlushMemTable() {
+    std::cerr << "Flush memtable, sequence number = " << sequence_number_ << std::endl;
     std::vector<std::pair<InternalKey, Value>> values = memtable_->Values();
     ASSERT(!values.empty());
 

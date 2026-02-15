@@ -30,3 +30,6 @@
 #else
 #define ASSERT_WITH_MESSAGE(cond, message) ASSERT_WITH_MESSAGE_IMPL(cond, message)
 #endif
+
+#define ENSURE(cond) ASSERT_IMPL(cond)
+#define ENSURE_WITH_MESSAGE(cond, message) ASSERT_WITH_MESSAGE_IMPL(cond, message)
