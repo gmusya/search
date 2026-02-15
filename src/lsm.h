@@ -84,6 +84,23 @@ class Lsm {
   std::vector<std::pair<Key, Value>> ReadRange(std::optional<Key> min, std::optional<Key> max) {
     std::vector<std::pair<InternalKey, Value>> memtable_range = memtable_->ReadRange(min, max);
 
+    for (const auto& level : sstables_) {
+      for (const SSTableInfo& info : level) {
+        if ((!min || info.max >= *min) && (!max || info.min <= *max)) {
+          std::shared_ptr<IFile> file = filesystem_->Open(info.sstable_path);
+          SSTableReader reader(file);
+
+          auto sstable_range = reader.ReadRange(min, max);
+          std::vector<std::pair<InternalKey, Value>> result;
+
+          std::merge(memtable_range.begin(), memtable_range.end(), sstable_range.begin(), sstable_range.end(),
+                     std::back_inserter(result));
+
+          std::swap(memtable_range, result);
+        }
+      }
+    }
+
     memtable_range.erase(std::unique(memtable_range.begin(), memtable_range.end(),
                                      [&](const auto& lhs, const auto& rhs) { return lhs.first.key == rhs.first.key; }),
                          memtable_range.end());
@@ -103,7 +120,6 @@ class Lsm {
 
  private:
   void FlushMemTable() {
-    std::cerr << "Flush memtable, sequence number = " << sequence_number_ << std::endl;
     std::vector<std::pair<InternalKey, Value>> values = memtable_->Values();
     ASSERT(!values.empty());
 

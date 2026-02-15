@@ -16,7 +16,6 @@ class LocalFile : public IFile {
       : file_path_(file_path), file_(file_path, std::ios_base::in | std::ios_base::out) {}
 
   void Read(uint64_t offset, uint64_t bytes, void* output) const override {
-    ASSERT(offset + bytes <= storage_.size());
     file_.seekp(offset);
     file_.read(reinterpret_cast<char*>(output), bytes);
   }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <ios>
@@ -37,7 +38,12 @@ class LocalFileSystem : public IFileSystem {
  private:
   class FileOpener {
    public:
-    explicit FileOpener(const std::string& file_path) : file_path_(file_path) { std::ofstream out(file_path_); }
+    explicit FileOpener(const std::string& file_path) : file_path_(file_path) {
+      auto res = std::fopen(file_path_.c_str(), "w+");
+      ENSURE(res != nullptr);
+
+      std::fclose(res);
+    }
 
     FileOpener(FileOpener&&) = delete;
     FileOpener(const FileOpener&) = delete;
