@@ -22,6 +22,19 @@ bool Bitmap::Empty() const {
   return bitmap_.isEmpty();
 }
 
+std::vector<uint8_t> Bitmap::Serialize() const {
+  size_t size = bitmap_.getSizeInBytes();
+  std::vector<uint8_t> data(size);
+  bitmap_.write(reinterpret_cast<char*>(data.data()));
+  return data;
+}
+
+Bitmap Bitmap::Deserialize(const std::vector<uint8_t>& data) {
+  Bitmap result;
+  result.bitmap_ = roaring::Roaring::read(reinterpret_cast<const char*>(data.data()));
+  return result;
+}
+
 Bitmap Bitmap::operator&(const Bitmap& other) const {
   Bitmap result;
   result.bitmap_ = bitmap_ & other.bitmap_;

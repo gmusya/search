@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "roaring/roaring.hh"
 
@@ -17,6 +18,9 @@ class Bitmap {
 
   uint64_t Cardinality() const;
   bool Empty() const;
+
+  std::vector<uint8_t> Serialize() const;
+  static Bitmap Deserialize(const std::vector<uint8_t>& data);
 
   Bitmap operator&(const Bitmap& other) const;
   Bitmap operator|(const Bitmap& other) const;
