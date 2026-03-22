@@ -1,6 +1,7 @@
 add_executable(search-index-test
     bitmap_test.cpp
     index_test.cpp
+    stemmer_test.cpp
 )
 
 target_link_libraries(search-index-test PUBLIC search-index gtest gtest_main)

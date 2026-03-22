@@ -14,10 +14,17 @@ using DocumentId = uint32_t;
 using Word = std::string;
 using Document = std::vector<Word>;
 
+class IStorage {
+ public:
+  virtual void Add(const Word& word, DocumentId document_id) = 0;
+  virtual Bitmap Get(const Word& word) const = 0;
+
+  virtual ~IStorage() = default;
+};
+
 class Index {
  public:
-  Index() = default;
-  explicit Index(std::shared_ptr<Stemmer> stemmer);
+  Index(std::shared_ptr<IStorage> storage, std::shared_ptr<Stemmer> stemmer = nullptr);
 
   DocumentId AddDocument(const Document& document);
 
@@ -29,7 +36,7 @@ class Index {
   DocumentId docs_ = 0;
 
   std::shared_ptr<Stemmer> stemmer_;
-  std::map<Word, Bitmap> index_;
+  std::shared_ptr<IStorage> storage_;
 };
 
 }  // namespace search

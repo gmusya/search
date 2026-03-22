@@ -6,8 +6,27 @@
 
 namespace search {
 
+class MapStorage : public IStorage {
+ public:
+  void Add(const Word& word, DocumentId document_id) override {
+    index_[word].Add(document_id);
+  }
+
+  Bitmap Get(const Word& word) const override {
+    auto it = index_.find(word);
+    if (it == index_.end()) {
+      return Bitmap();
+    }
+    return it->second;
+  }
+
+ private:
+  std::map<Word, Bitmap> index_;
+};
+
 TEST(Index, DocumentsByWord) {
-  Index index;
+  auto storage = std::make_shared<MapStorage>();
+  Index index(storage);
   index.AddDocument({"cat", "dog"});
   index.AddDocument({"dog", "bird"});
   index.AddDocument({"cat", "bird"});
@@ -32,7 +51,8 @@ TEST(Index, DocumentsByWord) {
 }
 
 TEST(Index, DocumentsByWordMissing) {
-  Index index;
+  auto storage = std::make_shared<MapStorage>();
+  Index index(storage);
   index.AddDocument({"hello"});
 
   Bitmap result = index.DocumentsByWord("nonexistent");
@@ -41,7 +61,8 @@ TEST(Index, DocumentsByWordMissing) {
 }
 
 TEST(Index, DuplicateWordsInDocument) {
-  Index index;
+  auto storage = std::make_shared<MapStorage>();
+  Index index(storage);
   index.AddDocument({"hello", "hello", "world"});
 
   Bitmap hello_docs = index.DocumentsByWord("hello");
@@ -50,8 +71,9 @@ TEST(Index, DuplicateWordsInDocument) {
 }
 
 TEST(Index, WithStemmer) {
+  auto storage = std::make_shared<MapStorage>();
   auto stemmer = std::make_shared<Stemmer>("english");
-  Index index(stemmer);
+  Index index(storage, stemmer);
 
   // "running" and "runs" should both stem to the same root
   index.AddDocument({"running", "fast"});  // 0

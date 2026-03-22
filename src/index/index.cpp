@@ -4,25 +4,21 @@
 
 namespace search {
 
-Index::Index(std::shared_ptr<Stemmer> stemmer) : stemmer_(std::move(stemmer)) {}
+Index::Index(std::shared_ptr<IStorage> storage, std::shared_ptr<Stemmer> stemmer)
+    : stemmer_(std::move(stemmer)), storage_(std::move(storage)) {}
 
 DocumentId Index::AddDocument(const Document& document) {
   DocumentId id = docs_++;
 
   for (const Word& word : document) {
-    index_[NormalizeWord(word)].Add(id);
+    storage_->Add(NormalizeWord(word), id);
   }
 
   return id;
 }
 
 Bitmap Index::DocumentsByWord(const Word& word) const {
-  auto it = index_.find(NormalizeWord(word));
-  if (it == index_.end()) {
-    return Bitmap();
-  }
-
-  return it->second;
+  return storage_->Get(NormalizeWord(word));
 }
 
 Word Index::NormalizeWord(const Word& word) const {
