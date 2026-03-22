@@ -6,12 +6,12 @@
 #include <optional>
 #include <vector>
 
-#include "src/bloom_filter.h"
-#include "src/file.h"
-#include "src/filesystem.h"
-#include "src/memtable.h"
-#include "src/sstable.h"
-#include "src/types.h"
+#include "src/lsm/bloom_filter.h"
+#include "src/lsm/file.h"
+#include "src/lsm/filesystem.h"
+#include "src/lsm/memtable.h"
+#include "src/lsm/sstable.h"
+#include "src/lsm/types.h"
 
 namespace search {
 

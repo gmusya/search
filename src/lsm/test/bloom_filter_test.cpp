@@ -1,7 +1,7 @@
-#include "src/bloom_filter.h"
+#include "src/lsm/bloom_filter.h"
 
 #include "gtest/gtest.h"
-#include "src/memory_file.h"
+#include "src/lsm/memory_file.h"
 
 namespace search {
 

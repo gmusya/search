@@ -1,4 +1,4 @@
-#include "src/lsm.h"
+#include "src/lsm/lsm.h"
 
 namespace search {
 

@@ -1,4 +1,4 @@
-#include "src/memtable.h"
+#include "src/lsm/memtable.h"
 
 #include <limits>
 

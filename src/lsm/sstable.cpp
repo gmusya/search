@@ -1,4 +1,4 @@
-#include "src/sstable.h"
+#include "src/lsm/sstable.h"
 
 #include <limits>
 

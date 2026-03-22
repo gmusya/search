@@ -3,8 +3,8 @@
 #include <cstring>
 #include <vector>
 
-#include "src/assert.h"
-#include "src/file.h"
+#include "src/lsm/assert.h"
+#include "src/lsm/file.h"
 
 namespace search {
 

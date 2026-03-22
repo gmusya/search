@@ -7,10 +7,10 @@
 #include <iostream>
 #include <map>
 
-#include "src/file.h"
-#include "src/filesystem.h"
-#include "src/local_file.h"
-#include "src/macro.h"
+#include "src/lsm/file.h"
+#include "src/lsm/filesystem.h"
+#include "src/lsm/local_file.h"
+#include "src/lsm/macro.h"
 
 namespace search {
 

@@ -3,7 +3,7 @@
 #include <map>
 #include <optional>
 
-#include "src/types.h"
+#include "src/lsm/types.h"
 
 namespace search {
 
