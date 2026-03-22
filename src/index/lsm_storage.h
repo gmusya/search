@@ -21,6 +21,7 @@ class LsmStorage : public IStorage {
 
   void Add(const Word& word, DocumentId document_id) override;
   Bitmap Get(const Word& word) const override;
+  Bitmap GetRange(const Word& min, const Word& max) const override;
 
  private:
   static Key WordToKey(const Word& word);

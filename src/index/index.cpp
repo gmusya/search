@@ -17,8 +17,12 @@ DocumentId Index::AddDocument(const Document& document) {
   return id;
 }
 
-Bitmap Index::DocumentsByWord(const Word& word) const {
-  return storage_->Get(NormalizeWord(word));
+Bitmap Index::DocumentsByWord(const Word& word) const { return storage_->Get(NormalizeWord(word)); }
+
+Bitmap Index::DocumentsByPrefix(const Word& prefix) const {
+  Word max = prefix;
+  max.push_back(std::numeric_limits<uint8_t>::max());
+  return storage_->GetRange(prefix, max);
 }
 
 Word Index::NormalizeWord(const Word& word) const {

@@ -34,6 +34,17 @@ Bitmap LsmStorage::Get(const Word& word) const {
   return Bitmap::Deserialize(*result);
 }
 
+Bitmap LsmStorage::GetRange(const Word& min, const Word& max) const {
+  Key min_key = WordToKey(min);
+  Key max_key = WordToKey(max);
+  auto result = lsm_.ReadRange(min_key, max_key);
+  Bitmap bitmap;
+  for (auto& [key, value] : result) {
+    bitmap |= Bitmap::Deserialize(value);
+  }
+  return bitmap;
+}
+
 Key LsmStorage::WordToKey(const Word& word) {
   return Key(word.begin(), word.end());
 }

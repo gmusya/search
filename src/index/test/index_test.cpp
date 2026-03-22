@@ -10,9 +10,7 @@ namespace search {
 
 class MapStorage : public IStorage {
  public:
-  void Add(const Word& word, DocumentId document_id) override {
-    index_[word].Add(document_id);
-  }
+  void Add(const Word& word, DocumentId document_id) override { index_[word].Add(document_id); }
 
   Bitmap Get(const Word& word) const override {
     auto it = index_.find(word);
@@ -22,13 +20,21 @@ class MapStorage : public IStorage {
     return it->second;
   }
 
+  Bitmap GetRange(const Word& min, const Word& max) const override {
+    auto it = index_.lower_bound(min);
+    auto end = index_.upper_bound(max);
+    Bitmap bitmap;
+    for (; it != end; ++it) {
+      bitmap |= it->second;
+    }
+    return bitmap;
+  }
+
  private:
   std::map<Word, Bitmap> index_;
 };
 
-std::shared_ptr<IStorage> MakeMapStorage() {
-  return std::make_shared<MapStorage>();
-}
+std::shared_ptr<IStorage> MakeMapStorage() { return std::make_shared<MapStorage>(); }
 
 std::shared_ptr<IStorage> MakeLsmStorage() {
   return std::make_shared<LsmStorage>(std::make_shared<MemoryFileSystem>());
@@ -109,6 +115,65 @@ TEST_P(IndexTest, WithStemmer) {
   result = index.DocumentsByWord("jumping");
   EXPECT_EQ(result.Cardinality(), 1);
   EXPECT_TRUE(result.Contains(2));
+}
+
+TEST_P(IndexTest, DocumentsByPrefix) {
+  Index index(GetParam()());
+  index.AddDocument({"cat", "car"});
+  index.AddDocument({"dog", "dove"});
+  index.AddDocument({"catalog", "bird"});
+
+  Bitmap ca_docs = index.DocumentsByPrefix("ca");
+  EXPECT_EQ(ca_docs.Cardinality(), 2);
+  EXPECT_TRUE(ca_docs.Contains(0));
+  EXPECT_TRUE(ca_docs.Contains(2));
+
+  Bitmap cat_docs = index.DocumentsByPrefix("cat");
+  EXPECT_EQ(cat_docs.Cardinality(), 2);
+  EXPECT_TRUE(cat_docs.Contains(0));
+  EXPECT_TRUE(cat_docs.Contains(2));
+
+  Bitmap do_docs = index.DocumentsByPrefix("do");
+  EXPECT_EQ(do_docs.Cardinality(), 1);
+  EXPECT_TRUE(do_docs.Contains(1));
+
+  Bitmap dog_docs = index.DocumentsByPrefix("dog");
+  EXPECT_EQ(dog_docs.Cardinality(), 1);
+  EXPECT_TRUE(dog_docs.Contains(1));
+}
+
+TEST_P(IndexTest, DocumentsByPrefixMissing) {
+  Index index(GetParam()());
+  index.AddDocument({"hello", "world"});
+
+  Bitmap result = index.DocumentsByPrefix("xyz");
+  EXPECT_TRUE(result.Empty());
+}
+
+TEST_P(IndexTest, DocumentsByPrefixFullWord) {
+  Index index(GetParam()());
+  index.AddDocument({"apple"});
+  index.AddDocument({"application"});
+
+  Bitmap result = index.DocumentsByPrefix("apple");
+  EXPECT_EQ(result.Cardinality(), 1);
+  EXPECT_TRUE(result.Contains(0));
+
+  result = index.DocumentsByPrefix("app");
+  EXPECT_EQ(result.Cardinality(), 2);
+  EXPECT_TRUE(result.Contains(0));
+  EXPECT_TRUE(result.Contains(1));
+}
+
+TEST_P(IndexTest, DocumentsByPrefixEmptyPrefix) {
+  Index index(GetParam()());
+  index.AddDocument({"cat"});
+  index.AddDocument({"dog"});
+
+  Bitmap result = index.DocumentsByPrefix("");
+  EXPECT_EQ(result.Cardinality(), 2);
+  EXPECT_TRUE(result.Contains(0));
+  EXPECT_TRUE(result.Contains(1));
 }
 
 INSTANTIATE_TEST_SUITE_P(MapStorage, IndexTest, ::testing::Values(MakeMapStorage));

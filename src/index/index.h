@@ -7,6 +7,7 @@
 
 #include "src/index/bitmap.h"
 #include "src/index/stemmer.h"
+#include "src/lsm/macro.h"
 
 namespace search {
 
@@ -18,6 +19,7 @@ class IStorage {
  public:
   virtual void Add(const Word& word, DocumentId document_id) = 0;
   virtual Bitmap Get(const Word& word) const = 0;
+  virtual Bitmap GetRange(const Word& min, const Word& max) const = 0;
 
   virtual ~IStorage() = default;
 };
@@ -29,6 +31,8 @@ class Index {
   DocumentId AddDocument(const Document& document);
 
   Bitmap DocumentsByWord(const Word& word) const;
+
+  Bitmap DocumentsByPrefix(const Word& prefix) const;
 
  private:
   Word NormalizeWord(const Word& word) const;
