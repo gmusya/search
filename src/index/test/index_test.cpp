@@ -3,6 +3,8 @@
 #include <memory>
 
 #include "gtest/gtest.h"
+#include "src/index/lsm_storage.h"
+#include "src/lsm/memory_filesystem.h"
 
 namespace search {
 
@@ -24,9 +26,18 @@ class MapStorage : public IStorage {
   std::map<Word, Bitmap> index_;
 };
 
-TEST(Index, DocumentsByWord) {
-  auto storage = std::make_shared<MapStorage>();
-  Index index(storage);
+std::shared_ptr<IStorage> MakeMapStorage() {
+  return std::make_shared<MapStorage>();
+}
+
+std::shared_ptr<IStorage> MakeLsmStorage() {
+  return std::make_shared<LsmStorage>(std::make_shared<MemoryFileSystem>());
+}
+
+class IndexTest : public ::testing::TestWithParam<std::function<std::shared_ptr<IStorage>()>> {};
+
+TEST_P(IndexTest, DocumentsByWord) {
+  Index index(GetParam()());
   index.AddDocument({"cat", "dog"});
   index.AddDocument({"dog", "bird"});
   index.AddDocument({"cat", "bird"});
@@ -50,9 +61,8 @@ TEST(Index, DocumentsByWord) {
   EXPECT_TRUE(bird_docs.Contains(2));
 }
 
-TEST(Index, DocumentsByWordMissing) {
-  auto storage = std::make_shared<MapStorage>();
-  Index index(storage);
+TEST_P(IndexTest, DocumentsByWordMissing) {
+  Index index(GetParam()());
   index.AddDocument({"hello"});
 
   Bitmap result = index.DocumentsByWord("nonexistent");
@@ -60,9 +70,8 @@ TEST(Index, DocumentsByWordMissing) {
   EXPECT_EQ(result.Cardinality(), 0);
 }
 
-TEST(Index, DuplicateWordsInDocument) {
-  auto storage = std::make_shared<MapStorage>();
-  Index index(storage);
+TEST_P(IndexTest, DuplicateWordsInDocument) {
+  Index index(GetParam()());
   index.AddDocument({"hello", "hello", "world"});
 
   Bitmap hello_docs = index.DocumentsByWord("hello");
@@ -70,17 +79,14 @@ TEST(Index, DuplicateWordsInDocument) {
   EXPECT_TRUE(hello_docs.Contains(0));
 }
 
-TEST(Index, WithStemmer) {
-  auto storage = std::make_shared<MapStorage>();
+TEST_P(IndexTest, WithStemmer) {
   auto stemmer = std::make_shared<Stemmer>("english");
-  Index index(storage, stemmer);
+  Index index(GetParam()(), stemmer);
 
-  // "running" and "runs" should both stem to the same root
   index.AddDocument({"running", "fast"});  // 0
   index.AddDocument({"runs", "slow"});     // 1
   index.AddDocument({"jumped", "high"});   // 2
 
-  // Searching for any form should find both documents with run-variants
   Bitmap result = index.DocumentsByWord("running");
   EXPECT_EQ(result.Cardinality(), 2);
   EXPECT_TRUE(result.Contains(0));
@@ -96,15 +102,16 @@ TEST(Index, WithStemmer) {
   EXPECT_TRUE(result.Contains(0));
   EXPECT_TRUE(result.Contains(1));
 
-  // "jumped" should only match doc 2
   result = index.DocumentsByWord("jumped");
   EXPECT_EQ(result.Cardinality(), 1);
   EXPECT_TRUE(result.Contains(2));
 
-  // "jumping" should also match doc 2 (same stem)
   result = index.DocumentsByWord("jumping");
   EXPECT_EQ(result.Cardinality(), 1);
   EXPECT_TRUE(result.Contains(2));
 }
+
+INSTANTIATE_TEST_SUITE_P(MapStorage, IndexTest, ::testing::Values(MakeMapStorage));
+INSTANTIATE_TEST_SUITE_P(LsmStorage, IndexTest, ::testing::Values(MakeLsmStorage));
 
 }  // namespace search
