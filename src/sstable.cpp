@@ -33,8 +33,8 @@ void SSTableReader::Load() {
   file_->Read(0, sizeof(uint32_t), &entries_count_);
 
   const uint64_t offsets_bytes = static_cast<uint64_t>(entries_count_) * sizeof(uint32_t);
-  const uint64_t offsets_region_size = sizeof(uint32_t) + offsets_bytes;
 
+  [[maybe_unused]] const uint64_t offsets_region_size = sizeof(uint32_t) + offsets_bytes;
   ASSERT(offsets_region_size <= file_size_);
 }
 

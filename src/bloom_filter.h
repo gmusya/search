@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <random>
 
@@ -27,12 +28,18 @@ class Hasher {
 
   uint64_t Hash(const Bytes& bytes) const {
     uint64_t result = 0;
-    for (uint64_t i = 0; i * 8 < bytes.size(); ++i) {
+    uint64_t i = 0;
+    for (; i + 8 <= bytes.size(); i += 8) {
       uint64_t current;
       std::memcpy(&current, bytes.data() + i, sizeof(current));
 
       result = Hash(result) + Hash(current);
     }
+    uint64_t val = 0;
+    for (; i < bytes.size(); ++i) {
+      val = (val << 8) + bytes[i];
+    }
+    result = Hash(result) + Hash(val);
 
     return result;
   }

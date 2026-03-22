@@ -4,7 +4,7 @@ add_library(search-lsm STATIC
     sstable.cpp
 )
 
-target_include_directories(search-lsm PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(search-lsm PUBLIC ${CMAKE_SOURCE_DIR} absl::log)
 
 add_subdirectory(bench)
 add_subdirectory(test)

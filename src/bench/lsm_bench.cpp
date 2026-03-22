@@ -1,8 +1,10 @@
 #include <cstdint>
+#include <random>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 #include "src/bytes.h"
+#include "src/local_filesystem.h"
 #include "src/lsm.h"
 #include "src/memory_filesystem.h"
 
@@ -11,130 +13,76 @@ namespace search {
 namespace {
 
 Lsm MakeLsm() {
-  auto filesystem = std::make_shared<MemoryFileSystem>();
+  auto filesystem = std::make_shared<LocalFileSystem>("/tmp/aaa");
 
-  return Lsm(filesystem);
+  return Lsm(filesystem, Lsm::Parameters{.memtable_bytes_limit = 1 << 20});
 }
 
-std::vector<Key> BuildKeys(size_t count) {
-  std::vector<Key> keys;
-  keys.reserve(count);
-
+void FillLsm(Lsm& lsm, uint64_t count) {
   for (size_t i = 0; i < count; ++i) {
-    keys.emplace_back(ToBytes(static_cast<uint64_t>(i)));
-  }
-
-  return keys;
-}
-
-std::vector<Value> BuildValues(size_t count) {
-  std::vector<Value> values;
-  values.reserve(count);
-
-  for (size_t i = 0; i < count; ++i) {
-    values.emplace_back(ToBytes(static_cast<uint64_t>(i + 1000)));
-  }
-
-  return values;
-}
-
-void FillLsm(Lsm* lsm, const std::vector<Key>& keys, const std::vector<Value>& values) {
-  for (size_t i = 0; i < keys.size(); ++i) {
-    lsm->Insert(keys[i], values[i]);
+    auto key = ToBytes(i);
+    auto value = key;
+    lsm.Insert(key, value);
   }
 }
 
 void LsmInsert(benchmark::State& state) {
-  const size_t count = static_cast<size_t>(state.range(0));
-  const std::vector<Key> keys = BuildKeys(count);
-  const std::vector<Value> values = BuildValues(count);
-
+  Lsm lsm = MakeLsm();
+  uint64_t i = 0;
   for (auto _ : state) {
-    Lsm lsm = MakeLsm();
-    for (size_t i = 0; i < count; ++i) {
-      lsm.Insert(keys[i], values[i]);
+    auto key = ToBytes(i++);
+    auto value = key;
+    lsm.Insert(key, value);
+  }
+
+  state.SetItemsProcessed(state.iterations());
+}
+
+void LsmPointLookup(benchmark::State& state) {
+  const uint64_t count = static_cast<uint64_t>(state.range(0));
+
+  Lsm lsm = MakeLsm();
+  FillLsm(lsm, count);
+
+  uint64_t sum = 0;
+
+  uint64_t query = 0;
+  for (auto _ : state) {
+    std::optional<Value> result = lsm.Get(ToBytes(query++));
+    if (query == count) {
+      query = 0;
     }
+    sum += result.value().size();
   }
 
-  state.SetItemsProcessed(state.iterations() * static_cast<int64_t>(count));
-}
-
-void LsmPointLookupOldest(benchmark::State& state) {
-  const size_t count = static_cast<size_t>(state.range(0));
-  const std::vector<Key> keys = BuildKeys(count);
-  const std::vector<Value> values = BuildValues(count);
-
-  Lsm lsm = MakeLsm();
-  FillLsm(&lsm, keys, values);
-  const Key target = keys.front();
-
-  for (auto _ : state) {
-    std::optional<Value> result = lsm.Get(target);
-    benchmark::DoNotOptimize(result);
-  }
+  benchmark::DoNotOptimize(sum);
 
   state.SetItemsProcessed(state.iterations());
 }
 
-void LsmPointLookupMiddle(benchmark::State& state) {
-  const size_t count = static_cast<size_t>(state.range(0));
-  const std::vector<Key> keys = BuildKeys(count);
-  const std::vector<Value> values = BuildValues(count);
-
-  Lsm lsm = MakeLsm();
-  FillLsm(&lsm, keys, values);
-  const Key target = keys[count / 2];
-
-  for (auto _ : state) {
-    std::optional<Value> result = lsm.Get(target);
-    benchmark::DoNotOptimize(result);
-  }
-
-  state.SetItemsProcessed(state.iterations());
-}
-
-void LsmPointLookupNewest(benchmark::State& state) {
-  const size_t count = static_cast<size_t>(state.range(0));
-  const std::vector<Key> keys = BuildKeys(count);
-  const std::vector<Value> values = BuildValues(count);
-
-  Lsm lsm = MakeLsm();
-  FillLsm(&lsm, keys, values);
-  const Key target = keys.back();
-
-  for (auto _ : state) {
-    std::optional<Value> result = lsm.Get(target);
-    benchmark::DoNotOptimize(result);
-  }
-
-  state.SetItemsProcessed(state.iterations());
-}
-
-void LsmReadRangeSmall(benchmark::State& state) {
+void LsmReadSmallRange(benchmark::State& state) {
   const size_t count = static_cast<size_t>(state.range(0));
   const size_t window = static_cast<size_t>(state.range(1));
-  const std::vector<Key> keys = BuildKeys(count);
-  const std::vector<Value> values = BuildValues(count);
 
   Lsm lsm = MakeLsm();
-  FillLsm(&lsm, keys, values);
+  FillLsm(lsm, count);
 
-  size_t offset = 0;
+  size_t iters = 0;
+  uint64_t elems = 0;
   for (auto _ : state) {
-    const size_t left = offset % (count - window + 1);
-    std::vector<std::pair<Key, Value>> result = lsm.ReadRange(keys.at(left), keys.at(left + window - 1));
-    benchmark::DoNotOptimize(result);
-    offset += 9973;
+    const size_t left = iters % (count - window + 1);
+    std::vector<std::pair<Key, Value>> result = lsm.ReadRange(ToBytes(left), ToBytes(left + window - 1));
+    elems += result.size();
+    iters += 1;
   }
 
-  state.SetItemsProcessed(state.iterations() * static_cast<int64_t>(window));
+  benchmark::DoNotOptimize(elems);
+  state.SetItemsProcessed(iters);
 }
 
-BENCHMARK(LsmInsert)->Arg(1 << 10);
-BENCHMARK(LsmPointLookupOldest)->Arg(1 << 10);
-BENCHMARK(LsmPointLookupMiddle)->Arg(1 << 10);
-BENCHMARK(LsmPointLookupNewest)->Arg(1 << 10);
-BENCHMARK(LsmReadRangeSmall)->Args({1 << 10, 16});
+BENCHMARK(LsmInsert)->MinTime(3);
+BENCHMARK(LsmPointLookup)->Arg(1 << 17);
+BENCHMARK(LsmReadSmallRange)->Args({1 << 17, 16});
 
 }  // namespace
 
