@@ -1,13 +1,9 @@
 #pragma once
 
-#include <map>
-#include <memory>
-#include <string>
+#include <cstdint>
 #include <vector>
 
 #include "src/index/bitmap.h"
-#include "src/index/stemmer.h"
-#include "src/lsm/macro.h"
 
 namespace search {
 

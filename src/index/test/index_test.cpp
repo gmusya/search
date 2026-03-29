@@ -89,9 +89,9 @@ TEST_P(IndexTest, WithStemmer) {
   auto stemmer = std::make_shared<Stemmer>("english");
   Index index(GetParam()(), stemmer);
 
-  index.AddDocument({"running", "fast"});  // 0
-  index.AddDocument({"runs", "slow"});     // 1
-  index.AddDocument({"jumped", "high"});   // 2
+  index.AddDocument({"running", "fast"});
+  index.AddDocument({"runs", "slow"});
+  index.AddDocument({"jumped", "high"});
 
   Bitmap result = index.DocumentsByWord("running");
   EXPECT_EQ(result.Cardinality(), 2);
