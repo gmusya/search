@@ -1,5 +1,6 @@
 add_library(search-index STATIC
     bitmap.cpp
+    value_index.cpp
     index.cpp
     lsm_storage.cpp
     stemmer.cpp

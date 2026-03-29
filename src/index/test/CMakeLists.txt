@@ -1,5 +1,6 @@
 add_executable(search-index-test
     bitmap_test.cpp
+    value_index_test.cpp
     index_test.cpp
     lsm_storage_test.cpp
     stemmer_test.cpp

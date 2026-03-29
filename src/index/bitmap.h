@@ -27,6 +27,9 @@ class Bitmap {
 
   Bitmap& operator&=(const Bitmap& other);
   Bitmap& operator|=(const Bitmap& other);
+  Bitmap& operator-=(const Bitmap& other);
+
+  Bitmap operator-(const Bitmap& other) const;
 
   bool operator==(const Bitmap& other) const;
 
