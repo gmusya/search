@@ -43,4 +43,19 @@ class Index {
   std::shared_ptr<IStorage> storage_;
 };
 
+class KGramIndex {
+ public:
+  KGramIndex(std::shared_ptr<IStorage> storage, uint64_t k);
+
+  DocumentId AddDocument(const Document& document);
+
+  Bitmap DocumentsByWildcard(const Word& word) const;
+
+ private:
+  uint64_t k_ = 0;
+  DocumentId docs_ = 0;
+
+  std::shared_ptr<IStorage> storage_;
+};
+
 }  // namespace search

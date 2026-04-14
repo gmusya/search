@@ -57,6 +57,17 @@ Bitmap& Bitmap::operator|=(const Bitmap& other) {
   return *this;
 }
 
+Bitmap& Bitmap::operator-=(const Bitmap& other) {
+  bitmap_ -= other.bitmap_;
+  return *this;
+}
+
+Bitmap Bitmap::operator-(const Bitmap& other) const {
+  Bitmap result;
+  result.bitmap_ = bitmap_ - other.bitmap_;
+  return result;
+}
+
 bool Bitmap::operator==(const Bitmap& other) const {
   return bitmap_ == other.bitmap_;
 }
