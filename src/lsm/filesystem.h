@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "src/file.h"
+#include "src/lsm/file.h"
 
 namespace search {
 

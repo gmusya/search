@@ -2,9 +2,9 @@
 
 #include <map>
 
-#include "src/filesystem.h"
-#include "src/macro.h"
-#include "src/memory_file.h"
+#include "src/lsm/filesystem.h"
+#include "src/lsm/macro.h"
+#include "src/lsm/memory_file.h"
 
 namespace search {
 

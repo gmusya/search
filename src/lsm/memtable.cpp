@@ -1,4 +1,4 @@
-#include "src/memtable.h"
+#include "src/lsm/memtable.h"
 
 #include <limits>
 
@@ -17,18 +17,37 @@ void MemTable::Delete(SequenceNumber sequence_number, const Key& key) {
   entries_.emplace(std::move(ikey), std::move(empty));
 }
 
-MemTable::Status MemTable::Get(const Key& key, Value* result) const {
+MemTable::Status MemTable::Get(const Key& key, Value* result, const IMergeOperator* merge_operator) const {
   InternalKey seek{key, std::numeric_limits<uint64_t>::max(), false};
   auto it = entries_.lower_bound(seek);
-  if (it == entries_.end() || it->first.key != seek.key) {
+  if (it == entries_.end() || it->first.key != key) {
     return Status::kNotFound;
   }
-  if (it->first.is_deleted) {
-    *result = {};
-    return Status::kDeleted;
+
+  if (!merge_operator) {
+    if (it->first.is_deleted) {
+      *result = {};
+      return Status::kDeleted;
+    }
+    *result = it->second;
+    return Status::kFound;
   }
-  *result = it->second;
-  return Status::kFound;
+
+  bool found = false;
+  for (; it != entries_.end() && it->first.key == key; ++it) {
+    if (it->first.is_deleted) {
+      // TODO(gmusya): handle deletes with merge operator properly
+      continue;
+    }
+    if (found) {
+      *result = merge_operator->Merge(*result, it->second);
+    } else {
+      *result = it->second;
+      found = true;
+    }
+  }
+
+  return found ? Status::kFound : Status::kNotFound;
 }
 
 std::vector<std::pair<InternalKey, Value>> MemTable::ReadRange(std::optional<Key> min, std::optional<Key> max) {

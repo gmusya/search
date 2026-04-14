@@ -1,18 +1,46 @@
-#include "src/lsm.h"
+#include "src/lsm/lsm.h"
 
 namespace search {
 
-std::optional<Value> Lsm::Get(const Key& key) {
-  Value result;
-  MemTable::Status status = memtable_->Get(key, &result);
+void Lsm::CollapseEntries(std::vector<std::pair<InternalKey, Value>>& entries) const {
+  if (!merge_operator_ || entries.empty()) {
+    return;
+  }
 
-  if (status == MemTable::Status::kDeleted) {
+  std::vector<std::pair<InternalKey, Value>> collapsed;
+  collapsed.reserve(entries.size());
+
+  collapsed.push_back(std::move(entries[0]));
+
+  for (size_t i = 1; i < entries.size(); ++i) {
+    if (collapsed.back().first.key == entries[i].first.key) {
+      collapsed.back().second = merge_operator_->Merge(collapsed.back().second, entries[i].second);
+      collapsed.back().first.is_deleted = false;
+    } else {
+      collapsed.push_back(std::move(entries[i]));
+    }
+  }
+
+  entries = std::move(collapsed);
+}
+
+std::optional<Value> Lsm::Get(const Key& key) {
+  std::optional<Value> accumulated;
+
+  Value memtable_result;
+  MemTable::Status status = memtable_->Get(key, &memtable_result, merge_operator_.get());
+
+  if (status == MemTable::Status::kDeleted && !merge_operator_) {
     return std::nullopt;
   }
   if (status == MemTable::Status::kFound) {
-    return result;
+    accumulated = std::move(memtable_result);
+    if (!merge_operator_) {
+      return accumulated;
+    }
   }
 
+  // Check SSTables
   for (const auto& level : sstables_) {
     for (const SSTableInfo& info : level) {
       if (info.min <= key && key <= info.max) {
@@ -26,19 +54,28 @@ std::optional<Value> Lsm::Get(const Key& key) {
         std::shared_ptr<IFile> file = filesystem_->Open(info.sstable_path);
         SSTableReader reader(file);
 
+        Value result;
         SSTableReader::Status s = reader.Get(key, &result);
-        if (s == SSTableReader::Status::kDeleted) {
+
+        if (s == SSTableReader::Status::kDeleted && !merge_operator_) {
           return std::nullopt;
         }
 
         if (s == SSTableReader::Status::kFound) {
-          return result;
+          if (accumulated && merge_operator_) {
+            accumulated = merge_operator_->Merge(*accumulated, result);
+          } else {
+            accumulated = std::move(result);
+          }
+          if (!merge_operator_) {
+            return accumulated;
+          }
         }
       }
     }
   }
 
-  return std::nullopt;
+  return accumulated;
 }
 
 void Lsm::Insert(const Key& key, const Value& value) {
@@ -75,6 +112,17 @@ std::vector<std::pair<Key, Value>> Lsm::ReadRange(std::optional<Key> min, std::o
     }
   }
 
+  if (merge_operator_) {
+    CollapseEntries(memtable_range);
+
+    std::vector<std::pair<Key, Value>> cleared_result;
+    cleared_result.reserve(memtable_range.size());
+    for (auto& [k, v] : memtable_range) {
+      cleared_result.emplace_back(std::move(k.key), std::move(v));
+    }
+    return cleared_result;
+  }
+
   memtable_range.erase(std::unique(memtable_range.begin(), memtable_range.end(),
                                    [&](const auto& lhs, const auto& rhs) { return lhs.first.key == rhs.first.key; }),
                        memtable_range.end());
@@ -96,6 +144,8 @@ void Lsm::FlushMemTable() {
   std::vector<std::pair<InternalKey, Value>> values = memtable_->Values();
   ASSERT(!values.empty());
 
+  CollapseEntries(values);
+
   std::string new_path = filesystem_->Create();
   std::shared_ptr<IFile> file = filesystem_->Open(new_path);
 
@@ -105,7 +155,8 @@ void Lsm::FlushMemTable() {
   std::shared_ptr<IFile> bloom_filter_file = filesystem_->Open(bloom_filter_path);
 
   BloomFilterWriter bloom_filter_writer(
-      bloom_filter_file, BloomFilterParameters{.bytes = static_cast<uint32_t>(values.size() / 8), .functions = 2});
+      bloom_filter_file,
+      BloomFilterParameters{.bytes = std::max(1u, static_cast<uint32_t>(values.size() / 8)), .functions = 2});
   for (const auto& val : values) {
     bloom_filter_writer.Add(val.first.key);
   }
@@ -137,6 +188,8 @@ void Lsm::FlushMemTable() {
 
     std::merge(values0.begin(), values0.end(), values1.begin(), values1.end(), std::back_inserter(result));
 
+    CollapseEntries(result);
+
     std::string new_path = filesystem_->Create();
     std::string bloom_filter_path = filesystem_->Create();
 
@@ -148,7 +201,8 @@ void Lsm::FlushMemTable() {
     std::shared_ptr<IFile> bloom_filter_file = filesystem_->Open(bloom_filter_path);
 
     BloomFilterWriter bloom_filter_writer(
-        bloom_filter_file, BloomFilterParameters{.bytes = static_cast<uint32_t>(result.size() / 8), .functions = 2});
+        bloom_filter_file,
+        BloomFilterParameters{.bytes = std::max(1u, static_cast<uint32_t>(result.size() / 8)), .functions = 2});
     for (const auto& val : result) {
       bloom_filter_writer.Add(val.first.key);
     }

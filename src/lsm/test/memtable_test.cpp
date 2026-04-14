@@ -1,7 +1,7 @@
-#include "src/memtable.h"
+#include "src/lsm/memtable.h"
 
 #include "gtest/gtest.h"
-#include "src/bytes.h"
+#include "src/lsm/bytes.h"
 
 namespace search {
 

@@ -3,7 +3,8 @@
 #include <map>
 #include <optional>
 
-#include "src/types.h"
+#include "src/lsm/merge_operator.h"
+#include "src/lsm/types.h"
 
 namespace search {
 
@@ -15,7 +16,7 @@ class MemTable {
 
   void Delete(SequenceNumber sequence_number, const Key& key);
 
-  Status Get(const Key& key, Value* result) const;
+  Status Get(const Key& key, Value* result, const IMergeOperator* merge_operator = nullptr) const;
 
   std::vector<std::pair<InternalKey, Value>> ReadRange(std::optional<Key> min, std::optional<Key> max);
 

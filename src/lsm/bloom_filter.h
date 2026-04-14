@@ -4,8 +4,8 @@
 #include <memory>
 #include <random>
 
-#include "src/file.h"
-#include "src/types.h"
+#include "src/lsm/file.h"
+#include "src/lsm/types.h"
 
 namespace search {
 

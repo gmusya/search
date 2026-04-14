@@ -6,12 +6,13 @@
 #include <optional>
 #include <vector>
 
-#include "src/bloom_filter.h"
-#include "src/file.h"
-#include "src/filesystem.h"
-#include "src/memtable.h"
-#include "src/sstable.h"
-#include "src/types.h"
+#include "src/lsm/bloom_filter.h"
+#include "src/lsm/file.h"
+#include "src/lsm/filesystem.h"
+#include "src/lsm/memtable.h"
+#include "src/lsm/merge_operator.h"
+#include "src/lsm/sstable.h"
+#include "src/lsm/types.h"
 
 namespace search {
 
@@ -23,8 +24,9 @@ class Lsm {
     static Parameters Default() { return Parameters{}; }
   };
 
-  explicit Lsm(std::shared_ptr<IFileSystem> filesystem, Parameters params = Parameters::Default())
-      : params_(params), filesystem_(filesystem) {
+  explicit Lsm(std::shared_ptr<IFileSystem> filesystem, Parameters params = Parameters::Default(),
+               std::shared_ptr<IMergeOperator> merge_operator = nullptr)
+      : params_(params), filesystem_(filesystem), merge_operator_(std::move(merge_operator)) {
     memtable_.emplace();
   }
 
@@ -39,6 +41,8 @@ class Lsm {
  private:
   void FlushMemTable();
 
+  void CollapseEntries(std::vector<std::pair<InternalKey, Value>>& entries) const;
+
   struct SSTableInfo {
     Key min;
     Key max;
@@ -51,6 +55,7 @@ class Lsm {
   SequenceNumber sequence_number_ = 0;
 
   std::shared_ptr<IFileSystem> filesystem_;
+  std::shared_ptr<IMergeOperator> merge_operator_;
 
   std::vector<std::vector<SSTableInfo>> sstables_;
   std::optional<MemTable> memtable_;

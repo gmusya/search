@@ -1,8 +1,8 @@
-#include "src/lsm.h"
+#include "src/lsm/lsm.h"
 
 #include "gtest/gtest.h"
-#include "src/bytes.h"
-#include "src/memory_filesystem.h"
+#include "src/lsm/bytes.h"
+#include "src/lsm/memory_filesystem.h"
 
 namespace search {
 

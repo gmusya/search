@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "src/assert.h"
+#include "src/lsm/assert.h"
 
 namespace search {
 

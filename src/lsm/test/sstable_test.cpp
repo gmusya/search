@@ -1,8 +1,8 @@
-#include "src/sstable.h"
+#include "src/lsm/sstable.h"
 
 #include "gtest/gtest.h"
-#include "src/memory_file.h"
-#include "src/types.h"
+#include "src/lsm/memory_file.h"
+#include "src/lsm/types.h"
 
 namespace search {
 
